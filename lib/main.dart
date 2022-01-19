@@ -1,7 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:tabmi/creaTablePage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod/riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:sembast/sembast.dart';
+import 'package:sembast/sembast_io.dart';
 
 void main() {
   runApp(
@@ -107,31 +114,108 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class TabListPage extends StatelessWidget {
+// class TabListPage extends StatelessWidget {
+//   Future<List<Widget>> fetchSongs() async {
+//     var dir = await getApplicationDocumentsDirectory();
+//     await dir.create(recursive: true);
+//     var dbPath = join(dir.path, 'tabmi.db');
+//     var db = await databaseFactoryIo.openDatabase(dbPath);
+//     var store = intMapStoreFactory.store('tabs');
+
+//     var tabs = (await (store.find(db)));
+//     // print(tabs);
+//     List<Widget> lines = [];
+//     for (var tab in tabs) {
+//       print(tab["title"]);
+//       // String title = tab["title"].toString();
+//       lines.add(Text(tab["title"].toString()));
+//     }
+
+//     return Future.value(lines);
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     // SharedPreferences prefs = await SharedPreferences.getInstance();
+//     // List<String> songIds = await prefs.getStringList("songIds") ?? [];
+//     return Scaffold(
+//       body: FutureBuilder(
+//         future: fetchSongs(),
+//         builder: (BuildContext context, AsyncSnapshot<List<Widget>> snapshot) {
+//           if (snapshot.connectionState == ConnectionState.waiting) {
+//             // 非同期処理未完了 = 通信中
+//             return const Center(
+//               child: CircularProgressIndicator(),
+//             );
+//           }
+
+//           if (snapshot.error != null) {
+//             // エラー
+//             return const Center(
+//               child: Text('エラーがおきました'),
+//             );
+//           }
+
+//           // 成功処理
+//           return ListView(children: snapshot.data ?? []);
+//           // return ListView(children: [Text('hi')]);
+//         },
+//       ),
+//     );
+//   }
+// }
+
+class TabListPage extends StatefulWidget {
+  @override
+  TabListPageState createState() => TabListPageState();
+}
+
+class TabListPageState extends State<TabListPage> {
+  Future<List<Widget>> fetchSongs() async {
+    var dir = await getApplicationDocumentsDirectory();
+    await dir.create(recursive: true);
+    var dbPath = join(dir.path, 'tabmi.db');
+    var db = await databaseFactoryIo.openDatabase(dbPath);
+    var store = intMapStoreFactory.store('tabs');
+
+    var tabs = (await (store.find(db)));
+    // print(tabs);
+    List<Widget> lines = [];
+    for (var tab in tabs) {
+      print(tab["title"]);
+      // String title = tab["title"].toString();
+      lines.add(Text(tab["title"].toString()));
+    }
+
+    return Future.value(lines);
+  }
+
   @override
   Widget build(BuildContext context) {
+    // SharedPreferences prefs = await SharedPreferences.getInstance();
+    // List<String> songIds = await prefs.getStringList("songIds") ?? [];
     return Scaffold(
-      body: ListView(
-        children: const <Widget>[
-          ListTile(
-            title: Text('test1'),
-          ),
-          Card(
-            child: ListTile(
-              title: Text('test2'),
-            ),
-          ),
-          Card(
-            child: ListTile(
-              title: Text('test3'),
-            ),
-          ),
-          Card(
-            child: ListTile(
-              title: Text('test4'),
-            ),
-          ),
-        ],
+      body: FutureBuilder(
+        future: fetchSongs(),
+        builder: (BuildContext context, AsyncSnapshot<List<Widget>> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            // 非同期処理未完了 = 通信中
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          if (snapshot.error != null) {
+            // エラー
+            return const Center(
+              child: Text('エラーがおきました'),
+            );
+          }
+
+          // 成功処理
+          return ListView(children: snapshot.data ?? []);
+          // return ListView(children: [Text('hi')]);
+        },
       ),
     );
   }

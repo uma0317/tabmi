@@ -1,7 +1,13 @@
 import 'package:flutter/foundation.dart';
+import 'dart:async';
+
 import 'package:riverpod/riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'creaTablePage.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:sembast/sembast.dart';
+import 'package:sembast/sembast_io.dart';
 
 const _uuid = Uuid();
 
@@ -10,32 +16,41 @@ class ChordBox {
     required this.chordType,
     required this.y,
     required this.id,
+    required this.groupId,
     required this.x,
   });
   Chords chordType;
   double y;
   final String id;
+  final String groupId;
   double x = 0;
   double fontSize = 20;
+
+  Map<String, Object?> toJson() =>
+      {'chordType': chordType.toString(), 'y': y, 'x': x, 'gourpId': groupId};
 }
 
 class ChordBoxList extends StateNotifier<List<ChordBox>> {
-  ChordBoxList([List<ChordBox>? iniialChordBoxes])
-      : super(iniialChordBoxes ?? []);
-
-  void add(Chords chordType, double y) {
+  ChordBoxList() : super([]);
+  // final String id;
+  void add(Chords chordType, double y, String groupId) {
     state = [
       ...state,
-      ChordBox(chordType: chordType, y: y, id: _uuid.v4(), x: 0),
+      ChordBox(
+          chordType: chordType, y: y, id: _uuid.v4(), groupId: groupId, x: 0),
     ];
   }
 
-  void editX({required String id, required double x}) {
+  void editX({
+    required String id,
+    required double x,
+  }) {
     state = [
       for (final chordBox in state)
         if (chordBox.id == id)
           ChordBox(
             id: chordBox.id,
+            groupId: chordBox.groupId,
             x: x,
             chordType: chordBox.chordType,
             y: chordBox.y,
@@ -45,69 +60,114 @@ class ChordBoxList extends StateNotifier<List<ChordBox>> {
     ];
   }
 
-  void remove(ChordBox target) {
-    state = state.where((target) => target.id != target.id).toList();
-  }
-}
-
-class TabLine {
-  TabLine({
-    required this.chords,
-    required this.id,
-    required this.lyrics,
-  });
-  ChordBoxList chords;
-  String lyrics;
-  final String id;
-}
-
-class TabLineList extends StateNotifier<List<TabLine>> {
-  TabLineList([List<TabLine>? iniialChordBoxes])
-      : super(iniialChordBoxes ?? []);
-
-  void add(ChordBoxList chords, String lyrics) {
+  void changeChord({
+    required String id,
+    required Chords chordType,
+  }) {
     state = [
-      ...state,
-      TabLine(id: _uuid.v4(), chords: chords, lyrics: lyrics),
-    ];
-  }
-
-  void editX(
-      {required String id,
-      required ChordBoxList chords,
-      required String lyrics}) {
-    state = [
-      for (final tabline in state)
-        if (tabline.id == id)
-          TabLine(
-            id: tabline.id,
-            lyrics: lyrics,
-            chords: chords,
+      for (final chordBox in state)
+        if (chordBox.id == id)
+          ChordBox(
+            id: chordBox.id,
+            groupId: chordBox.groupId,
+            x: chordBox.x,
+            chordType: chordType,
+            y: chordBox.y,
           )
         else
-          tabline,
+          chordBox,
     ];
   }
 
-  void remove(TabLinetarget) {
-    state = state.where((target) => target.id != target.id).toList();
+  void remove(ChordBox target) {
+    state = state.where((chordBox) => chordBox.id != target.id).toList();
+  }
+
+  void removeLast() {
+    // state = state.where((chordBox) => chordBox.id != target.id).toList();
+    state.removeLast();
+  }
+
+  void removeByGroupId(String groupId) {
+    state = state.where((element) => element.groupId != groupId).toList();
+  }
+
+  Map<String, Object?> toJson() {
+    return {"chords": state.map((e) => e.toJson()).toList()};
+  }
+
+  Future saveToDB({required id, required title}) async {
+    var dir = await getApplicationDocumentsDirectory();
+// make sure it exists
+    await dir.create(recursive: true);
+// build the database path
+    var dbPath = join(dir.path, 'my_database.db');
+// open the database
+    var db = await databaseFactoryIo.openDatabase(dbPath);
+    var store = intMapStoreFactory.store('my_store');
+    for (var song in state) {
+      var data = {
+        "id": id,
+        "title": title,
+        "chords": toJson(),
+      };
+      await store.add(db, data);
+    }
+    var key = await store.add(db, {'value': 'test'});
+
+// Retrieve the record
+    var record = store.record(key);
+    var readMap = await record.get(db);
+
+    print(record);
+    var records = (await (store.find(db,
+        finder: Finder(filter: Filter.matches('name', '^ugly')))));
+    print(records);
+    var recordss = (await (store.find(db,
+            finder: Finder(filter: Filter.matches('id', id)))))
+        .first;
+    print(recordss);
   }
 }
 
 class Lyrics {
-  Lyrics({required this.text, required this.id});
+  Lyrics({required this.text, required this.id, required this.groupId});
 
-  final String text;
+  String text;
   final String id;
+  final String groupId;
+
+  Map<String, Object?> toJson() => {'gourpId': groupId, "text": text};
 }
 
 class LyricsList extends StateNotifier<List<Lyrics>> {
   LyricsList([List<Lyrics>? iniialChordBoxes]) : super(iniialChordBoxes ?? []);
 
-  void add(String text) {
+  void createFromText(String text) {
+    for (var line in text.split("\n")) {
+      add(line, _uuid.v4());
+    }
+  }
+
+  void add(String text, String groupId) {
     state = [
       ...state,
-      Lyrics(id: _uuid.v4(), text: text),
+      Lyrics(
+        groupId: groupId,
+        id: _uuid.v4(),
+        text: text,
+      ),
+    ];
+  }
+
+  void addEmpty(String groupId) {
+    state = [
+      ...state,
+      Lyrics(
+        groupId: groupId,
+        id: _uuid.v4(),
+        text: "",
+      ),
     ];
   }
 
@@ -117,6 +177,7 @@ class LyricsList extends StateNotifier<List<Lyrics>> {
         if (lyrics.id == id)
           Lyrics(
             id: lyrics.id,
+            groupId: lyrics.groupId,
             text: text,
           )
         else
@@ -125,6 +186,14 @@ class LyricsList extends StateNotifier<List<Lyrics>> {
   }
 
   void remove(Lyrics target) {
-    state = state.where((target) => target.id != target.id).toList();
+    state = state.where((lyrics) => lyrics.id != target.id).toList();
+  }
+
+  void removeAll() {
+    state = [];
+  }
+
+  Map<String, Object?> toJson() {
+    return {"lyrics": state.map((e) => e.toJson()).toList()};
   }
 }
