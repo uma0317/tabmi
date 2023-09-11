@@ -1,18 +1,27 @@
 import 'dart:convert';
+import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:tabmi/creaTablePage.dart';
+import 'package:tabmi/pages/createTab.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod/riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
+import 'package:tabmi/app.dart';
+import 'package:tabmi/model/model.dart';
+import 'package:tabmi/pages/detail.dart';
+import 'package:tabmi/pages/import.dart';
+import 'package:tabmi/provider/dbProvider.dart';
+import 'package:uni_links/uni_links.dart';
+import 'package:flutter/services.dart';
 
-void main() {
+Future main() async {
+  await init();
   runApp(
-    ProviderScope(
+    const ProviderScope(
       child: MyApp(),
     ),
   );
@@ -26,13 +35,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: ThemeData.dark(),
       home: HomePage(),
       routes: {
         "/home": (BuildContext context) => HomePage(),
+        "/input": (context) => InputLyrics(),
         "/list_tab": (BuildContext context) => TabListPage(),
+        "/import": (BuildContext context) => ImportPage(),
       },
     );
   }
@@ -44,7 +53,7 @@ PageRouteBuilder bottomToTop(Widget page) {
       return page;
     },
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      const Offset begin = Offset(0.3, 1.0); // 下から上
+      const Offset begin = Offset(0.0, 1.0); // 下から上
       // final Offset begin = Offset(0.0, -1.0); // 上から下
       const Offset end = Offset.zero;
       final Animatable<Offset> tween = Tween(begin: begin, end: end)
@@ -65,48 +74,48 @@ class HomePage extends StatelessWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("HOME"),
-          bottom: const TabBar(tabs: <Widget>[
-            Tab(text: 'Tab 一覧'),
-            Tab(text: 'tab2'),
-            Tab(text: 'tab3'),
-          ]),
+          bottomOpacity: 0.0,
+          elevation: 0.0,
+          title: const Text("TAB 一覧"),
         ),
-        body: TabBarView(
-          children: <Widget>[
-            TabListPage(),
-            const Center(child: Text('雨', style: TextStyle(fontSize: 50))),
-            const Center(child: Text('晴れ', style: TextStyle(fontSize: 50))),
-          ],
-        ),
+        body: TabListPage(),
         floatingActionButton: FloatingActionButton(
-          child: Icon(Icons.add),
+          child: const Icon(Icons.add),
           onPressed: () {
-            // Navigator.of(context).pushNamed("/create_tab");
-            showModalBottomSheet<void>(
-              context: context,
-              builder: (BuildContext context) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Ink(
-                      child: ListTile(
-                        title: const Text('TAB作成'),
-                        onTap: () => {
-                          Navigator.pop(context),
-                          Navigator.of(context).push(
-                            bottomToTop(InputLyrics()),
-                          )
-                        },
-                      ),
-                    ),
-                    const ListTile(
-                      title: Text('list2'),
-                    ),
-                  ],
-                );
-              },
-            );
+            // Navigator.pop(context);
+            Navigator.of(context).pushNamed("/input");
+            // showModalBottomSheet<void>(
+            //   context: context,
+            //   builder: (BuildContext context) {
+            //     return Column(
+            //       mainAxisSize: MainAxisSize.min,
+            //       children: <Widget>[
+            //         Ink(
+            //           child: ListTile(
+            //             title: const Text('TAB作成'),
+            //             onTap: () => {
+            //               Navigator.pop(context),
+            //               Navigator.of(context).pushNamed("/input"),
+            //             },
+            //           ),
+            //         ),
+            //         Ink(
+            //           child: ListTile(
+            //             title: const Text('インポート'),
+            //             onTap: () => {
+            //               Navigator.pop(context),
+            //               Navigator.of(context)
+            //                   .pushNamed('/import', arguments: 'Hello'),
+            //             },
+            //           ),
+            //         ),
+            //         const ListTile(
+            //           title: Text('list2'),
+            //         ),
+            //       ],
+            //     );
+            //   },
+            // );
           },
         ),
       ),
@@ -114,109 +123,48 @@ class HomePage extends StatelessWidget {
   }
 }
 
-// class TabListPage extends StatelessWidget {
-//   Future<List<Widget>> fetchSongs() async {
-//     var dir = await getApplicationDocumentsDirectory();
-//     await dir.create(recursive: true);
-//     var dbPath = join(dir.path, 'tabmi.db');
-//     var db = await databaseFactoryIo.openDatabase(dbPath);
-//     var store = intMapStoreFactory.store('tabs');
-
-//     var tabs = (await (store.find(db)));
-//     // print(tabs);
-//     List<Widget> lines = [];
-//     for (var tab in tabs) {
-//       print(tab["title"]);
-//       // String title = tab["title"].toString();
-//       lines.add(Text(tab["title"].toString()));
-//     }
-
-//     return Future.value(lines);
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     // SharedPreferences prefs = await SharedPreferences.getInstance();
-//     // List<String> songIds = await prefs.getStringList("songIds") ?? [];
-//     return Scaffold(
-//       body: FutureBuilder(
-//         future: fetchSongs(),
-//         builder: (BuildContext context, AsyncSnapshot<List<Widget>> snapshot) {
-//           if (snapshot.connectionState == ConnectionState.waiting) {
-//             // 非同期処理未完了 = 通信中
-//             return const Center(
-//               child: CircularProgressIndicator(),
-//             );
-//           }
-
-//           if (snapshot.error != null) {
-//             // エラー
-//             return const Center(
-//               child: Text('エラーがおきました'),
-//             );
-//           }
-
-//           // 成功処理
-//           return ListView(children: snapshot.data ?? []);
-//           // return ListView(children: [Text('hi')]);
-//         },
-//       ),
-//     );
-//   }
-// }
-
 class TabListPage extends StatefulWidget {
   @override
   TabListPageState createState() => TabListPageState();
 }
 
 class TabListPageState extends State<TabListPage> {
-  Future<List<Widget>> fetchSongs() async {
-    var dir = await getApplicationDocumentsDirectory();
-    await dir.create(recursive: true);
-    var dbPath = join(dir.path, 'tabmi.db');
-    var db = await databaseFactoryIo.openDatabase(dbPath);
-    var store = intMapStoreFactory.store('tabs');
-
-    var tabs = (await (store.find(db)));
-    // print(tabs);
-    List<Widget> lines = [];
-    for (var tab in tabs) {
-      print(tab["title"]);
-      // String title = tab["title"].toString();
-      lines.add(Text(tab["title"].toString()));
-    }
-
-    return Future.value(lines);
-  }
-
   @override
   Widget build(BuildContext context) {
-    // SharedPreferences prefs = await SharedPreferences.getInstance();
-    // List<String> songIds = await prefs.getStringList("songIds") ?? [];
-    return Scaffold(
-      body: FutureBuilder(
-        future: fetchSongs(),
-        builder: (BuildContext context, AsyncSnapshot<List<Widget>> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            // 非同期処理未完了 = 通信中
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+    // var stream = _eventListStream;
+    return StreamBuilder<List<RecordSnapshot<int, Map<String, Object?>>>>(
+      stream: tabProvider.onTabs(),
+      builder: (BuildContext context, snapshot) {
+        if (snapshot.hasError) {
+          return Text('error:${snapshot.error}');
+        }
 
-          if (snapshot.error != null) {
-            // エラー
-            return const Center(
-              child: Text('エラーがおきました'),
-            );
-          }
+        if (snapshot.data == null) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
 
-          // 成功処理
-          return ListView(children: snapshot.data ?? []);
-          // return ListView(children: [Text('hi')]);
-        },
-      ),
+        List<TabData> tabs = [];
+        for (var tab in snapshot.data!) {
+          tabs.add(snapshotToTab(tab));
+          print(snapshotToTab(tab));
+        }
+
+        return ListView.builder(
+            itemCount: tabs.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                title: Text(tabs[index].title),
+                onTap: () => {
+                  Navigator.of(context)
+                      .push(MaterialPageRoute(builder: (context) {
+                    return TabDetailPage(dbKey: tabs[index].key);
+                  }))
+                },
+              );
+            });
+      },
     );
   }
 }

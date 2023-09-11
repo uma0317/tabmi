@@ -3,11 +3,12 @@ import 'dart:async';
 
 import 'package:riverpod/riverpod.dart';
 import 'package:uuid/uuid.dart';
-import 'creaTablePage.dart';
+import 'pages/createTab.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
+import 'package:tabmi/model/chords.dart';
 
 const _uuid = Uuid();
 
@@ -28,6 +29,12 @@ class ChordBox {
 
   Map<String, Object?> toJson() =>
       {'chordType': chordType.toString(), 'y': y, 'x': x, 'gourpId': groupId};
+
+  // List<ChordBox> fromSnapshot(Map<String, Object?> objs) {
+  //   for(var obj in objs) {
+
+  //   }
+  // }
 }
 
 class ChordBoxList extends StateNotifier<List<ChordBox>> {
@@ -83,6 +90,10 @@ class ChordBoxList extends StateNotifier<List<ChordBox>> {
     state = state.where((chordBox) => chordBox.id != target.id).toList();
   }
 
+  void removeAll() {
+    state = [];
+  }
+
   void removeLast() {
     // state = state.where((chordBox) => chordBox.id != target.id).toList();
     state.removeLast();
@@ -94,6 +105,10 @@ class ChordBoxList extends StateNotifier<List<ChordBox>> {
 
   Map<String, Object?> toJson() {
     return {"chords": state.map((e) => e.toJson()).toList()};
+  }
+
+  void restoreFromDb(List<ChordBox> chordBoxes) {
+    state = chordBoxes;
   }
 
   Future saveToDB({required id, required title}) async {
@@ -140,6 +155,12 @@ class Lyrics {
   Map<String, Object?> toJson() => {'gourpId': groupId, "text": text};
 }
 
+List<Lyrics> lyricsListFromString(String lyrics) {
+  return lyrics.split("\n").map((e) {
+    return Lyrics(groupId: _uuid.v4(), id: _uuid.v4(), text: e);
+  }).toList();
+}
+
 class LyricsList extends StateNotifier<List<Lyrics>> {
   LyricsList([List<Lyrics>? iniialChordBoxes]) : super(iniialChordBoxes ?? []);
 
@@ -171,6 +192,18 @@ class LyricsList extends StateNotifier<List<Lyrics>> {
     ];
   }
 
+  void addNextLine(Lyrics lyric) {
+    var index = state.indexOf(lyric);
+    state.insert(
+      index + 1,
+      Lyrics(
+        groupId: _uuid.v4(),
+        id: _uuid.v4(),
+        text: "",
+      ),
+    );
+  }
+
   void editX({required String id, required String text}) {
     state = [
       for (final lyrics in state)
@@ -191,6 +224,10 @@ class LyricsList extends StateNotifier<List<Lyrics>> {
 
   void removeAll() {
     state = [];
+  }
+
+  void restoreFromDb(List<Lyrics> lyrics) {
+    state = lyrics;
   }
 
   Map<String, Object?> toJson() {

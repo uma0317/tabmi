@@ -36,9 +36,12 @@ dependencies:
   cupertino_icons: ^1.0.2
   flutter_riverpod: ^2.0.0-dev.0
   uuid: ^3.0.4
-  shared_preferences: ^2.0.12
   sembast: ^3.1.1+1
   path_provider: ^2.0.8
+  path_provider_ios: ^2.0.7
+  share_plus: ^3.0.4
+  crypto: ^3.0.1
+  uni_links: ^0.5.1
 
 dev_dependencies:
   flutter_test:
